@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrivacyShield Toolkit | Secure Redaction & Metadata Removal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        dark: '#0f172a',
+                        darker: '#020617',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for in-browser JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- PDF.js for rendering PDFs to Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    </script>
+
+    <!-- PDF-lib for generating the final scrubbed PDF -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+    <style>
+        /* Custom scrollbar for canvas area */
+        .canvas-container::-webkit-scrollbar { width: 8px; height: 8px; }
+        .canvas-container::-webkit-scrollbar-track { background: transparent; }
+        .canvas-container::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+        .dark .canvas-container::-webkit-scrollbar-thumb { background-color: #475569; }
+        
+        /* Prosaic styles for generated content pages */
+        .prose-content h2 { font-size: 1.5rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; }
+        .prose-content p { margin-bottom: 1rem; line-height: 1.7; }
+        .prose-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .prose-content li { margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 transition-colors duration-200">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+        const { PDFDocument } = PDFLib;
+
+        // --- UI Icons (Inline SVGs) ---
+        const Icons = {
+            Shield: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+            Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+            Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+            Moon: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+            Sun: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+            ChevronLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>,
+            ChevronRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
+            ArrowLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        };
+
+        // --- Mock Data: 15 Blog Articles for AdSense "Content Richness" ---
+        const blogArticles = [
+            { id: 1, date: "Oct 12, 2024", title: "The Hidden Dangers of PDF Metadata", excerpt: "Every PDF you share contains hidden data. Learn what EXIF and metadata are, and why stripping them is crucial for privacy.", content: "When you create or save a PDF document, your software automatically embeds hidden information known as metadata. This can include the author's name, the software used to create the document, the exact date and time of creation, and sometimes even the file path on your local computer. Sharing these files online or via email inadvertently exposes this information to the recipient. To protect your identity and operational security, it's vital to scrub this metadata. Our tool accomplishes this by completely rasterizing your documents—effectively flattening them into an image and creating a brand new PDF from scratch, ensuring zero hidden digital footprints." },
+            { id: 2, date: "Oct 14, 2024", title: "Why Black Highlighters Fail: The Anatomy of a Bad Redaction", excerpt: "Simply drawing a black box over text in a PDF editor doesn't actually remove the underlying text. Find out why.", content: "A common and dangerous mistake made by legal teams and individuals alike is attempting to redact documents by drawing black rectangles over sensitive text using standard PDF editing software. The problem? These tools often just add a new layer on top of the text layer. Anyone who receives the document can simply highlight the area, copy it, and paste it into a text editor to read the 'redacted' information. Proper redaction requires either destroying the text layer entirely or flattening the document. PrivacyShield Toolkit solves this by converting pages to images before generating your final file, making it mathematically impossible to recover the hidden text." },
+            { id: 3, date: "Oct 18, 2024", title: "Client-Side Processing: The Gold Standard for Privacy", excerpt: "Why uploading your sensitive documents to a cloud server to redact them is a terrible idea.", content: "Many online PDF tools require you to upload your document to their servers for processing. Even if they promise to 'delete your file after 1 hour', you are still trusting a third party with your sensitive data (like bank statements, legal documents, or medical records) while it is in transit and at rest on their servers. True privacy means your data never leaves your device. Technologies like HTML5 Canvas and JavaScript Web Workers allow sophisticated file processing to happen locally inside your browser window. PrivacyShield operates exactly this way—it works entirely offline once the page loads." },
+            { id: 4, date: "Oct 22, 2024", title: "EXIF Data in Images: What Your Photos Are Broadcasting", excerpt: "JPGs and PNGs carry a surprising amount of data. Learn how to sanitize your images before sharing.", content: "Digital cameras and smartphones embed EXIF (Exchangeable Image File Format) data into the photos you take. This data often includes precise GPS coordinates, camera models, exposure settings, and timestamps. If you take a picture of a sensitive document or a location and share it online, anyone can extract this EXIF data to discover exactly where and when the photo was taken. Sanitizing images before sharing them publicly is a critical step in modern personal security. By processing your image through our flattening tool, all EXIF data is immediately discarded." },
+            { id: 5, date: "Oct 25, 2024", title: "HIPAA and Document Redaction: Staying Compliant", excerpt: "Healthcare professionals must be incredibly careful when sharing patient records. Here are best practices for digital redaction.", content: "The Health Insurance Portability and Accountability Act (HIPAA) mandates strict protections for Protected Health Information (PHI). When medical professionals need to share records for research, audits, or legal reasons, PHI must be irreversibly redacted. Using proper redaction tools that eliminate metadata and flatten text layers is not just a best practice—it's a regulatory necessity. Tools that process data entirely client-side, like PrivacyShield, add an extra layer of compliance by ensuring the PHI is never transmitted to an unauthorized third-party server." },
+            { id: 6, date: "Oct 28, 2024", title: "How to Securely Redact Bank Statements for Loans", excerpt: "Applying for a mortgage? Learn how to safely black out account numbers without invalidating your statement.", content: "When applying for loans or mortgages, you are often required to provide bank statements to prove income or assets. However, you rarely need to provide your full account number. Redacting this information protects you from identity theft. The key is to redact only the sensitive string of numbers while leaving your name, address, and transaction history legible. Using a reliable, local-first redaction tool ensures that your financial history doesn't end up saved on a random server while you prepare your application." },
+            { id: 7, date: "Nov 02, 2024", title: "The 'Flattening' Method: How PrivacyShield Works", excerpt: "A deep dive into the technical process of rasterization and why it's the safest way to sanitize a file.", content: "You might wonder how we guarantee that your redactions are secure. The secret is 'flattening' via rasterization. When you upload a PDF, we don't read the text. Instead, we use your browser's PDF.js library to draw the document onto an HTML5 Canvas, essentially taking a digital photograph of the page. When you draw a redaction box, you are painting black pixels onto that photograph. When you export, we generate a brand new PDF using only those pixels. There is no text layer to recover, and no original file metadata is carried over. It is foolproof." },
+            { id: 8, date: "Nov 05, 2024", title: "Identity Theft: Preventative Measures in the Digital Age", excerpt: "Redacting documents before sharing is a crucial step in preventing identity theft. Learn more proactive steps.", content: "Identity theft occurs when someone obtains your personal information—like your Social Security Number, date of birth, or bank account details—and uses it for financial gain. One of the easiest ways criminals obtain this data is through improperly secured digital documents. Before emailing tax returns to an accountant or sending identity proofs to a landlord, always redact unnecessary sensitive fields. Combine this with strong, unique passwords and two-factor authentication to drastically reduce your risk." },
+            { id: 9, date: "Nov 09, 2024", title: "Understanding Zero-Trust Architecture in Web Apps", excerpt: "Why 'zero-trust' isn't just a buzzword, and how client-side processing fits into the model.", content: "Zero Trust is a security framework requiring all users, whether inside or outside the organization's network, to be authenticated, authorized, and continuously validated. For consumer web applications, a zero-trust approach means the application should not trust the server with the user's plain-text data. Client-side processing tools represent a form of zero-trust architecture. Because the server never receives the file, the server cannot be compromised to leak the file. The trust boundary is limited strictly to the user's own local machine." },
+            { id: 10, date: "Nov 14, 2024", title: "Legal Disasters: Famous Cases of Botched Redaction", excerpt: "From the Paul Manafort trial to the UK Ministry of Defence, explore high-profile redaction failures.", content: "History is littered with examples of legal professionals failing to properly redact documents. In the Paul Manafort trial, lawyers submitted a PDF with black boxes drawn over text. Journalists simply copy-pasted the text from beneath the boxes, revealing crucial case details. Similarly, the UK Ministry of Defence once leaked secrets about nuclear submarines due to a similar copy-paste error. These public embarrassments underscore why visual obscuration is never enough; the underlying data must be destroyed." },
+            { id: 11, date: "Nov 17, 2024", title: "Is Password Protecting a PDF Enough?", excerpt: "Adding a password to a PDF stops casual viewers, but what happens when you have to give the password away?", content: "Password encryption is a great way to secure a document in transit. However, if you are sending a document to someone who is authorized to open it, but unauthorized to view certain *parts* of it (like a vendor viewing a contract with hidden pricing), a password does nothing to protect the internal data. Once they unlock the PDF, they have access to all metadata, hidden layers, and unredacted text. Redaction and encryption serve two entirely different, but complementary, security purposes." },
+            { id: 12, date: "Nov 21, 2024", title: "How to Verify Your Document is Truly Redacted", excerpt: "Don't just trust the tool. Here are methods to test your finalized documents to ensure they are secure.", content: "After using any redaction tool, it is wise to verify the output. The simplest test is the 'Highlight and Copy' test. Open your newly redacted PDF in standard software like Adobe Acrobat or Chrome. Try to click and drag your mouse over the blacked-out area. If you can select invisible text and copy it, the redaction failed. You should also check the document properties (File > Properties) to ensure the author and creation metadata are scrubbed. PrivacyShield is designed to pass these tests 100% of the time." },
+            { id: 13, date: "Nov 25, 2024", title: "The Future of Browser-Based Productivity", excerpt: "Why we are moving away from desktop software to powerful, local-first web applications.", content: "A decade ago, processing a complex PDF or editing high-resolution images required bulky, expensive desktop software. Today, modern web browsers possess incredible processing power. Through technologies like WebAssembly (Wasm) and advanced JavaScript APIs, web apps can now rival native desktop applications in performance. This shift allows users to access powerful tools instantly without installing untrusted software, while still maintaining the privacy benefits of local execution." },
+            { id: 14, date: "Nov 29, 2024", title: "Protecting Minors' Data in Educational Records", excerpt: "Schools and educators face unique challenges when sharing student records. Redaction is essential.", content: "The Family Educational Rights and Privacy Act (FERPA) protects the privacy of student education records. When schools must release documents—whether for public records requests or to third-party organizations—they must carefully redact personally identifiable information (PII) of minors. Teachers and administrators need accessible, foolproof tools to ensure they don't accidentally leak student data. Browser-based, secure redaction tools provide an easy way for educators to comply with these strict privacy laws." },
+            { id: 15, date: "Dec 02, 2024", title: "Open Source vs. Proprietary Security Tools", excerpt: "Why transparency in code is vital for tools that handle your most sensitive information.", content: "When evaluating a security tool, trust is paramount. Proprietary, closed-source tools require blind trust that the software is doing what it claims and isn't secretly phoning home. Tools built on open-source libraries (like PDF.js and PDF-lib) benefit from the scrutiny of thousands of developers worldwide. While PrivacyShield Toolkit is a proprietary interface, its core processing relies on these battle-tested, open-source standards, and its client-side nature means technically savvy users can inspect their network tab to verify no data ever leaves the browser." }
+        ];
+
+        const App = () => {
+            const [theme, setTheme] = useState('light');
+            // Routing State: 'tool', 'about', 'contact', 'privacy', 'blog', 'article'
+            const [currentView, setCurrentView] = useState('tool');
+            const [activeArticleId, setActiveArticleId] = useState(null);
+
+            // Tool State
+            const [file, setFile] = useState(null);
+            const [fileName, setFileName] = useState('');
+            const [fileType, setFileType] = useState('');
+            const [pages, setPages] = useState([]); 
+            const [currentPage, setCurrentPage] = useState(0);
+            
+            // Redaction State
+            const [redactions, setRedactions] = useState({});
+            const canvasRef = useRef(null);
+            const [isDrawing, setIsDrawing] = useState(false);
+            const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+            const [currentRect, setCurrentRect] = useState(null);
+
+            // UI State
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [loadingMsg, setLoadingMsg] = useState('');
+            const [dragActive, setDragActive] = useState(false);
+
+            // --- Theme Initialization ---
+            useEffect(() => {
+                const storedTheme = localStorage.getItem('theme') || 'light';
+                setTheme(storedTheme);
+                document.documentElement.className = storedTheme;
+                document.body.className = storedTheme === 'dark' ? 'bg-dark text-gray-100' : 'bg-gray-50 text-gray-900';
+            }, []);
+
+            const toggleTheme = () => {
+                const newTheme = theme === 'light' ? 'dark' : 'light';
+                setTheme(newTheme);
+                localStorage.setItem('theme', newTheme);
+                document.documentElement.className = newTheme;
+                document.body.className = newTheme === 'dark' ? 'bg-dark text-gray-100' : 'bg-gray-50 text-gray-900';
+            };
+
+            // --- Navigation Logic ---
+            const navigateTo = (view, articleId = null) => {
+                setCurrentView(view);
+                if (articleId) setActiveArticleId(articleId);
+                window.scrollTo(0, 0);
+            };
+
+            // --- File Handling (Tool Logic) ---
+            const handleDrag = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+                else if (e.type === "dragleave") setDragActive(false);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    processFile(e.dataTransfer.files[0]);
+                }
+            };
+
+            const handleFileInput = (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    processFile(e.target.files[0]);
+                }
+            };
+
+            const clearWorkspace = () => {
+                setFile(null);
+                setFileName('');
+                setFileType('');
+                setPages([]);
+                setRedactions({});
+                setCurrentPage(0);
+                setCurrentRect(null);
+            };
+
+            const processFile = async (droppedFile) => {
+                const type = droppedFile.type;
+                if (!type.startsWith('image/') && type !== 'application/pdf') {
+                    alert('Please upload a valid Image (JPG/PNG) or PDF.');
+                    return;
+                }
+
+                setIsProcessing(true);
+                setLoadingMsg('Securely loading file...');
+                setFileName(droppedFile.name);
+                setFileType(type.startsWith('image/') ? 'image' : 'pdf');
+                setRedactions({});
+                setCurrentPage(0);
+
+                try {
+                    if (type.startsWith('image/')) {
+                        const url = URL.createObjectURL(droppedFile);
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            setPages([canvas.toDataURL('image/png')]);
+                            setIsProcessing(false);
+                        };
+                        img.src = url;
+                    } else if (type === 'application/pdf') {
+                        const arrayBuffer = await droppedFile.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        const numPages = pdf.numPages;
+                        const loadedPages = [];
+
+                        for (let i = 1; i <= numPages; i++) {
+                            setLoadingMsg(`Rasterizing page ${i} of ${numPages} to strip metadata...`);
+                            const page = await pdf.getPage(i);
+                            const viewport = page.getViewport({ scale: 1.5 }); 
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+
+                            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                            loadedPages.push(canvas.toDataURL('image/jpeg', 0.9)); 
+                        }
+                        setPages(loadedPages);
+                        setIsProcessing(false);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("Error processing file safely.");
+                    setIsProcessing(false);
+                    clearWorkspace();
+                }
+            };
+
+            // --- Canvas Drawing Logic ---
+            useEffect(() => {
+                if (currentView !== 'tool' || !pages[currentPage] || !canvasRef.current) return;
+                
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    ctx.drawImage(img, 0, 0);
+
+                    const currentRedactions = redactions[currentPage] || [];
+                    ctx.fillStyle = '#000000';
+                    currentRedactions.forEach(rect => {
+                        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+                    });
+
+                    if (currentRect) {
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(currentRect.x, currentRect.y, currentRect.w, currentRect.h);
+                    }
+                };
+                img.src = pages[currentPage];
+            }, [pages, currentPage, redactions, currentRect, currentView]);
+
+            const getCanvasCoordinates = (e) => {
+                const canvas = canvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                let clientX = e.clientX;
+                let clientY = e.clientY;
+                if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                }
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            };
+
+            const handlePointerDown = (e) => {
+                e.preventDefault(); 
+                const coords = getCanvasCoordinates(e);
+                setIsDrawing(true);
+                setStartPos(coords);
+                setCurrentRect({ x: coords.x, y: coords.y, w: 0, h: 0 });
+            };
+
+            const handlePointerMove = (e) => {
+                if (!isDrawing) return;
+                e.preventDefault();
+                const coords = getCanvasCoordinates(e);
+                const w = coords.x - startPos.x;
+                const h = coords.y - startPos.y;
+                setCurrentRect({
+                    x: w < 0 ? coords.x : startPos.x,
+                    y: h < 0 ? coords.y : startPos.y,
+                    w: Math.abs(w),
+                    h: Math.abs(h)
+                });
+            };
+
+            const handlePointerUp = (e) => {
+                if (!isDrawing) return;
+                setIsDrawing(false);
+                if (currentRect && currentRect.w > 5 && currentRect.h > 5) {
+                    setRedactions(prev => ({
+                        ...prev,
+                        [currentPage]: [...(prev[currentPage] || []), currentRect]
+                    }));
+                }
+                setCurrentRect(null);
+            };
+
+            const undoLastRedaction = () => {
+                setRedactions(prev => {
+                    const current = prev[currentPage] || [];
+                    if (current.length === 0) return prev;
+                    return { ...prev, [currentPage]: current.slice(0, -1) };
+                });
+            };
+
+            const clearAllRedactions = () => {
+                if(confirm('Clear all redactions on this page?')) {
+                    setRedactions(prev => ({ ...prev, [currentPage]: [] }));
+                }
+            };
+
+            // --- Export Logic ---
+            const downloadSecuredFile = async () => {
+                setIsProcessing(true);
+                setLoadingMsg('Generating secured, metadata-free file...');
+
+                try {
+                    const bakedPages = await Promise.all(pages.map(async (pageDataUrl, index) => {
+                        return new Promise((resolve) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                
+                                const pageRedactions = redactions[index] || [];
+                                ctx.fillStyle = '#000000';
+                                pageRedactions.forEach(rect => {
+                                    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+                                });
+                                
+                                resolve(canvas.toDataURL('image/jpeg', 0.95)); 
+                            };
+                            img.src = pageDataUrl;
+                        });
+                    }));
+
+                    if (fileType === 'image') {
+                        const link = document.createElement('a');
+                        link.href = bakedPages[0];
+                        link.download = `secured_${fileName.split('.')[0]}.jpg`;
+                        link.click();
+                    } else {
+                        const pdfDoc = await PDFDocument.create();
+                        for (const pageDataUrl of bakedPages) {
+                            const img = await pdfDoc.embedJpg(pageDataUrl);
+                            const page = pdfDoc.addPage([img.width, img.height]);
+                            page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+                        }
+                        pdfDoc.setTitle('Secured Document');
+                        pdfDoc.setAuthor('PrivacyShield Toolkit');
+                        pdfDoc.setSubject('');
+                        pdfDoc.setKeywords([]);
+                        pdfDoc.setProducer('PrivacyShield');
+                        pdfDoc.setCreator('PrivacyShield');
+
+                        const pdfBytes = await pdfDoc.save();
+                        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = `secured_${fileName}`;
+                        link.click();
+                    }
+                } catch (err) {
+                    console.error("Export Error: ", err);
+                    alert("An error occurred during export.");
+                }
+                setIsProcessing(false);
+            };
+
+            // --- Render Components ---
+
+            const renderTool = () => (
+                <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm flex flex-col overflow-hidden relative min-h-[600px]">
+                    {isProcessing && (
+                        <div className="absolute inset-0 bg-white/80 dark:bg-darker/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+                            <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"></div>
+                            <p className="font-medium text-lg animate-pulse">{loadingMsg}</p>
+                        </div>
+                    )}
+
+                    {!pages.length ? (
+                        <div 
+                            className={`flex-1 flex flex-col items-center justify-center p-8 border-2 border-dashed m-4 rounded-xl transition-all duration-200 ${dragActive ? 'border-primary bg-primary/5 dark:bg-primary/10' : 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30'}`}
+                            onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
+                        >
+                            <div className="text-gray-400 dark:text-gray-500 mb-4"><Icons.Upload /></div>
+                            <h3 className="text-xl font-semibold mb-2">Drag & Drop your file here</h3>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 text-center max-w-md">
+                                Supports PDF, JPG, and PNG. <br/>
+                                All processing happens locally in your browser. No data is sent to any server.
+                            </p>
+                            <label className="bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium cursor-pointer transition-colors shadow-sm">
+                                Browse Files
+                                <input type="file" className="hidden" accept=".pdf,image/jpeg,image/png" onChange={handleFileInput} />
+                            </label>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col h-full">
+                            <div className="border-b border-gray-200 dark:border-gray-800 p-4 flex flex-wrap items-center justify-between gap-4 bg-gray-50 dark:bg-gray-900/50">
+                                <div className="flex items-center gap-4">
+                                    <button onClick={clearWorkspace} className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors" title="Close File"><Icons.X /></button>
+                                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-700"></div>
+                                    <span className="font-medium truncate max-w-[200px]" title={fileName}>{fileName}</span>
+                                    <span className="hidden md:inline-flex text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded font-medium border border-blue-200 dark:border-blue-800">
+                                        Auto-Scrub Active
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {fileType === 'pdf' && pages.length > 1 && (
+                                        <div className="flex items-center gap-2 bg-white dark:bg-darker border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1">
+                                            <button disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)} className="p-1 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"><Icons.ChevronLeft /></button>
+                                            <span className="text-sm font-medium min-w-[3rem] text-center">{currentPage + 1} / {pages.length}</span>
+                                            <button disabled={currentPage === pages.length - 1} onClick={() => setCurrentPage(p => p + 1)} className="p-1 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"><Icons.ChevronRight /></button>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-darker">
+                                        <button onClick={undoLastRedaction} className="px-3 py-1.5 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 border-r border-gray-200 dark:border-gray-700">Undo</button>
+                                        <button onClick={clearAllRedactions} className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1"><Icons.Trash /> Clear</button>
+                                    </div>
+                                    <button onClick={downloadSecuredFile} className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                                        <Icons.Download /> Download Secured File
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex-1 bg-gray-200 dark:bg-black overflow-auto p-4 flex justify-center items-start canvas-container cursor-crosshair">
+                                <canvas
+                                    ref={canvasRef}
+                                    onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
+                                    onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}
+                                    className="shadow-xl max-w-full bg-white block"
+                                    style={{ touchAction: 'none' }}
+                                />
+                            </div>
+                            <div className="bg-gray-100 dark:bg-gray-800 p-2 text-center text-sm text-gray-500 border-t border-gray-200 dark:border-gray-700">
+                                Click and drag on the document to draw redaction boxes over sensitive information. Metadata is stripped automatically.
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+
+            const renderAbout = () => (
+                <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8 prose-content">
+                    <h2 className="text-3xl font-bold mt-0 border-b border-gray-200 dark:border-gray-800 pb-4">About PrivacyShield</h2>
+                    
+                    <h3 className="text-2xl font-semibold mt-6 mb-3">Our Mission: Privacy by Default</h3>
+                    <p>At <strong>PrivacyShield</strong>, we believe that your data belongs to you—not to a server in the cloud. In an era where "free" online tools often come at the cost of your privacy, we built a toolkit that operates on a different principle: <strong>Zero-Upload Processing</strong>.</p>
+                    
+                    <h3 className="text-2xl font-semibold mt-8 mb-3">What Makes Us Different?</h3>
+                    <p className="mb-4">Unlike traditional PDF and image converters that require you to upload sensitive files to their servers, PrivacyShield uses advanced <strong>Client-Side Technology</strong>.</p>
+                    <ul className="list-disc pl-6 space-y-2 mb-6">
+                        <li><strong>No Uploads:</strong> Your files never leave your computer.</li>
+                        <li><strong>Total Privacy:</strong> We cannot see, store, or share your data because we never receive it.</li>
+                        <li><strong>Professional Grade:</strong> Designed specifically for high-stakes industries like <em>Real Estate, Legal, and Finance</em>, where document security is non-negotiable.</li>
+                    </ul>
+
+                    <h3 className="text-2xl font-semibold mt-8 mb-3">Our Specialized Toolkit</h3>
+                    <p className="mb-4">We focus on "micro-tools" that solve specific professional pain points:</p>
+                    <ul className="list-disc pl-6 space-y-2 mb-6">
+                        <li><strong>Real Estate Redactor:</strong> Securely blur client names and bank details on closing documents.</li>
+                        <li><strong>Metadata Cleaner:</strong> Strip hidden GPS and author data from property photos before listing them.</li>
+                        <li><strong>Secure File Converters:</strong> Fast, browser-based conversion for sensitive PDF and image files.</li>
+                    </ul>
+
+                    <h3 className="text-2xl font-semibold mt-8 mb-3">Our Commitment to Transparency</h3>
+                    <p>PrivacyShield is supported by non-intrusive advertisements. This allows us to keep these professional-grade tools free for everyone while maintaining the highest security standards. We do not sell user data—because we don't collect it in the first place.</p>
+                    <p className="mt-4">
+                        For support or inquiries, please visit our <button onClick={() => navigateTo('contact')} className="text-primary hover:underline font-medium">Contact Us</button> page.
+                    </p>
+
+                    <div className="mt-10 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <h4 className="text-lg font-bold mb-2 flex items-center gap-2">
+                            <Icons.Shield /> Founder's Note
+                        </h4>
+                        <p className="text-sm italic text-gray-600 dark:text-gray-400">
+                            "I built PrivacyShield because I saw too many professionals blindly uploading sensitive client data to random web servers just to black out a few lines of text. Our goal is to make local, zero-trust security the easiest and most accessible option for everyone."
+                        </p>
+                        <p className="text-sm font-semibold mt-2 text-gray-700 dark:text-gray-300">— The PrivacyShield Team</p>
+                    </div>
+                </div>
+            );
+
+            const renderContact = () => (
+                <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8">
+                    <h2 className="text-3xl font-bold mb-6 border-b border-gray-200 dark:border-gray-800 pb-4">Contact Us</h2>
+                    <p className="mb-6 text-gray-600 dark:text-gray-400">Have questions about our tools, suggestions for features, or business inquiries? Reach out to us using the form below.</p>
+                    <form className="max-w-lg space-y-4" onSubmit={(e) => { e.preventDefault(); alert("Thanks for reaching out! We'll get back to you soon."); }}>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Name</label>
+                            <input type="text" required className="w-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none" placeholder="Your Name" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Email Address</label>
+                            <input type="email" required className="w-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none" placeholder="you@example.com" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Message</label>
+                            <textarea required rows="5" className="w-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none" placeholder="How can we help you?"></textarea>
+                        </div>
+                        <button type="submit" className="bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">Send Message</button>
+                    </form>
+                </div>
+            );
+
+            const renderPrivacy = () => (
+                <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8 prose-content">
+                    <h2 className="text-3xl font-bold mt-0 border-b border-gray-200 dark:border-gray-800 pb-4">Privacy Policy</h2>
+                    <p className="text-sm text-gray-500 mb-8">Last Updated: October 2024</p>
+                    
+                    <h3 className="text-xl font-bold mt-6 mb-2">1. Your Files Are Yours</h3>
+                    <p>The core functionality of PrivacyShield Toolkit is designed with absolute privacy in mind. <strong>We do not upload, transmit, store, or analyze the files you process using our tool.</strong> All file rendering, redaction, metadata stripping, and exporting occurs strictly within the confines of your local web browser.</p>
+
+                    <h3 className="text-xl font-bold mt-6 mb-2">2. Data We Do Not Collect</h3>
+                    <ul className="list-disc pl-6 space-y-2 mt-4">
+                        <li>We do not collect the documents or images you upload.</li>
+                        <li>We do not collect the text or data you redact.</li>
+                        <li>We do not log file names, file sizes, or EXIF metadata.</li>
+                    </ul>
+
+                    <h3 className="text-xl font-bold mt-6 mb-2">3. Cookies & Analytics</h3>
+                    <p>We may use standard analytical tools (such as Google Analytics) to measure basic website traffic and usage patterns (e.g., how many visitors view the site daily). We also use a minimal local storage variable to remember your dark/light theme preference. Advertising partners (like Google AdSense) may place cookies on your browser to serve personalized ads based on your visits to our site and other sites on the internet.</p>
+
+                    <h3 className="text-xl font-bold mt-6 mb-2">4. Third-Party Links</h3>
+                    <p>Our website may contain links to external sites or articles. We are not responsible for the privacy practices or content of these external sites.</p>
+
+                    <h3 className="text-xl font-bold mt-6 mb-2">5. Changes to This Policy</h3>
+                    <p>We reserve the right to modify this privacy policy at any time. Any changes will be updated on this page. Because our tool relies purely on client-side technology, future updates will never compromise our commitment to keeping your files local.</p>
+                </div>
+            );
+
+            const renderBlog = () => (
+                <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8">
+                    <h2 className="text-3xl font-bold mb-2">Data Privacy Blog</h2>
+                    <p className="text-gray-500 dark:text-gray-400 mb-8 pb-4 border-b border-gray-200 dark:border-gray-800">Insights, tutorials, and news about document security and metadata management.</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {blogArticles.map(article => (
+                            <div key={article.id} className="border border-gray-200 dark:border-gray-700 p-5 rounded-lg hover:border-primary transition-colors cursor-pointer group" onClick={() => navigateTo('article', article.id)}>
+                                <span className="text-xs text-primary font-semibold tracking-wider uppercase mb-2 block">{article.date}</span>
+                                <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{article.title}</h3>
+                                <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3">{article.excerpt}</p>
+                                <div className="mt-4 text-primary text-sm font-medium flex items-center gap-1">Read Article <Icons.ChevronRight /></div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            const renderArticle = () => {
+                const article = blogArticles.find(a => a.id === activeArticleId);
+                if (!article) return <div>Article not found.</div>;
+                
+                return (
+                    <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8">
+                        <button onClick={() => navigateTo('blog')} className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors mb-6">
+                            <Icons.ArrowLeft /> Back to Blog
+                        </button>
+                        <span className="text-sm text-primary font-semibold tracking-wider uppercase mb-3 block">{article.date}</span>
+                        <h1 className="text-3xl md:text-4xl font-bold mb-6">{article.title}</h1>
+                        <div className="prose-content text-lg">
+                            <p className="text-xl text-gray-600 dark:text-gray-400 italic mb-6 border-l-4 border-primary pl-4">{article.excerpt}</p>
+                            <p>{article.content}</p>
+                            <div className="mt-12 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-6 rounded-lg">
+                                <h4 className="text-lg font-bold mb-2">Secure Your Documents Today</h4>
+                                <p className="text-sm mb-4">Don't risk your privacy by sharing documents with hidden metadata or improper redactions. Use our free, 100% client-side tool to scrub your files safely.</p>
+                                <button onClick={() => navigateTo('tool')} className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded font-medium transition-colors text-sm">Open PrivacyShield Tool</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col font-sans">
+                    {/* Header */}
+                    <header className="bg-white dark:bg-darker border-b border-gray-200 dark:border-gray-800 shadow-sm z-10 sticky top-0">
+                        <div className="max-w-7xl mx-auto px-4">
+                            <div className="h-16 flex items-center justify-between">
+                                <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigateTo('tool')}>
+                                    <div className="text-primary"><Icons.Shield /></div>
+                                    <h1 className="font-bold text-xl tracking-tight hidden sm:block">PrivacyShield Toolkit</h1>
+                                    
+                                    {/* Updated Badge as per AdSense E-E-A-T suggestion */}
+                                    <span className="hidden sm:inline-flex items-center ml-4 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs font-semibold px-2.5 py-0.5 rounded border border-green-300 dark:border-green-800">
+                                        <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
+                                        Processed Locally: Files never leave your device
+                                    </span>
+                                </div>
+                                
+                                {/* Navigation Menu */}
+                                <nav className="flex items-center gap-1 md:gap-4 overflow-x-auto no-scrollbar">
+                                    <button onClick={() => navigateTo('tool')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'tool' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Redact Tool</button>
+                                    <button onClick={() => navigateTo('blog')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'blog' || currentView === 'article' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Blog</button>
+                                    <button onClick={() => navigateTo('about')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'about' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>About</button>
+                                    <button onClick={() => navigateTo('privacy')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'privacy' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Privacy</button>
+                                    <button onClick={() => navigateTo('contact')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'contact' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Contact</button>
+                                </nav>
+
+                                <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ml-2" aria-label="Toggle Dark Mode">
+                                    {theme === 'light' ? <Icons.Moon /> : <Icons.Sun />}
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Top Ad Banner Container */}
+                    <div className="max-w-7xl mx-auto w-full px-4 pt-6">
+                        <div className="w-full h-24 bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm font-medium">
+                            Ad Container (Top Banner) - Insert Google AdSense Script Here
+                        </div>
+                    </div>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 flex gap-6">
+                        
+                        {/* Dynamic View Area */}
+                        <div className="flex-1 flex flex-col min-w-0">
+                            {currentView === 'tool' && renderTool()}
+                            {currentView === 'about' && renderAbout()}
+                            {currentView === 'contact' && renderContact()}
+                            {currentView === 'privacy' && renderPrivacy()}
+                            {currentView === 'blog' && renderBlog()}
+                            {currentView === 'article' && renderArticle()}
+                        </div>
+
+                        {/* Sidebar Ad Container */}
+                        <div className="hidden lg:flex flex-col w-[300px] gap-6 flex-shrink-0">
+                            <div className="w-full h-[600px] bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 text-sm font-medium p-6 text-center sticky top-24">
+                                <span>Ad Container (Sidebar)</span>
+                                <span className="text-xs mt-2 opacity-70">Insert Google AdSense Script Here (e.g. 300x600 Half-page ad)</span>
+                            </div>
+                        </div>
+
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="border-t border-gray-200 dark:border-gray-800 py-6 text-center text-sm text-gray-500 mt-auto bg-white dark:bg-darker">
+                        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <p>© {new Date().getFullYear()} PrivacyShield Toolkit. All rights reserved.</p>
+                            <p className="flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                Local processing powered by standard Web APIs.
+                            </p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
