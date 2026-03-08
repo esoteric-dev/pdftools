@@ -487,6 +487,22 @@ const App = () => {
         </div>
     );
 
+    const renderTerms = () => (
+        <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8 prose-content">
+            <h2 className="text-3xl font-bold mt-0 border-b border-gray-200 dark:border-gray-800 pb-4">Terms of Service</h2>
+            <p className="text-sm text-gray-500 mb-8">Last Updated: October 2024</p>
+            
+            <h3 className="text-xl font-bold mt-6 mb-2">1. Acceptance of Terms</h3>
+            <p>By accessing and using PrivacyShield Toolkit, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you are prohibited from using this site.</p>
+
+            <h3 className="text-xl font-bold mt-6 mb-2">2. Description of Service</h3>
+            <p>PrivacyShield provides browser-based file manipulation tools. The processing happens locally on your device.</p>
+
+            <h3 className="text-xl font-bold mt-6 mb-2">3. Limitation of Liability</h3>
+            <p>The tools provided on this website are provided "as is" without warranty of any kind. We are not liable for any file errors, loss of data, or damages arising from the use of our service.</p>
+        </div>
+    );
+
     const renderBlog = () => (
         <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8">
             <h2 className="text-3xl font-bold mb-2">Data Privacy Blog</h2>
@@ -542,12 +558,13 @@ const App = () => {
                             {/* Updated Badge as per AdSense E-E-A-T suggestion */}
                             <span className="hidden sm:inline-flex items-center ml-4 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs font-semibold px-2.5 py-0.5 rounded border border-green-300 dark:border-green-800">
                                 <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
-                                Processed Locally: Files never leave your device
+                                Offline Mode Active: Files are processed 100% on your device
                             </span>
                         </div>
                         
                         {/* Navigation Menu */}
                         <nav className="flex items-center gap-1 md:gap-4 overflow-x-auto no-scrollbar">
+                            <a href="/" className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Home Toolkit</a>
                             <button onClick={() => navigateTo('tool')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'tool' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Redact Tool</button>
                             <button onClick={() => navigateTo('blog')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'blog' || currentView === 'article' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Blog</button>
                             <button onClick={() => navigateTo('about')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'about' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>About</button>
@@ -578,6 +595,7 @@ const App = () => {
                     {currentView === 'about' && renderAbout()}
                     {currentView === 'contact' && renderContact()}
                     {currentView === 'privacy' && renderPrivacy()}
+                    {currentView === 'terms' && renderTerms()}
                     {currentView === 'blog' && renderBlog()}
                     {currentView === 'article' && renderArticle()}
                 </div>
@@ -616,14 +634,15 @@ const App = () => {
 
             </main>
 
-            {/* Footer */}
-            <footer className="border-t border-gray-200 dark:border-gray-800 py-6 text-center text-sm text-gray-500 mt-auto bg-white dark:bg-darker">
+            {/* Ad-Ready Footer */}
+            <footer className="border-t border-gray-200 dark:border-gray-800 py-6 text-sm text-gray-500 mt-auto bg-white dark:bg-darker">
                 <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p>© {new Date().getFullYear()} PrivacyShield Toolkit. All rights reserved.</p>
-                    <p className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        Local processing powered by standard Web APIs.
-                    </p>
+                    <div className="flex items-center gap-4 font-medium">
+                        <button onClick={() => navigateTo('privacy')} className="hover:text-primary transition-colors">Privacy Policy</button>
+                        <button onClick={() => navigateTo('terms')} className="hover:text-primary transition-colors">Terms of Service</button>
+                        <button onClick={() => navigateTo('contact')} className="hover:text-primary transition-colors">Contact Us</button>
+                    </div>
                 </div>
             </footer>
         </div>
