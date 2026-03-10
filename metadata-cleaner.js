@@ -23,6 +23,7 @@ const App = () => {
     const [cleanDataUrl, setCleanDataUrl] = useState(null);
     const [isPdf, setIsPdf] = useState(false);
     const [isWasmLoaded, setIsWasmLoaded] = useState(false);
+    const [batchProgress, setBatchProgress] = useState(null);
 
     // --- Theme Initialization ---
     useEffect(() => {
@@ -66,14 +67,22 @@ const App = () => {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            processFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFiles(e.dataTransfer.files);
         }
     };
 
     const handleFileInput = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            processFile(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            handleFiles(e.target.files);
+        }
+    };
+
+    const handleFiles = (fileList) => {
+        if (fileList.length === 1) {
+            processFile(fileList[0]);
+        } else {
+            processBatchFiles(fileList);
         }
     };
 
@@ -146,9 +155,34 @@ const App = () => {
         
         try {
             const arrayBuffer = await pdfFile.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer);
             
-            // Call into Rust WASM safely using the global export
+            // 1. Extract real metadata using PDF-lib before scrubbing
+            const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer, { updateMetadata: false });
+            
+            const extractedData = {};
+            const title = pdfDoc.getTitle();
+            const author = pdfDoc.getAuthor();
+            const subject = pdfDoc.getSubject();
+            const creator = pdfDoc.getCreator();
+            const producer = pdfDoc.getProducer();
+            
+            if (title) extractedData['Title'] = title;
+            if (author) extractedData['Author'] = author;
+            if (subject) extractedData['Subject'] = subject;
+            if (creator) extractedData['Creator'] = creator;
+            if (producer) extractedData['Producer'] = producer;
+
+            // Optional: Count form fields or annotations as "Interactive Elements"
+            const form = pdfDoc.getForm();
+            const fields = form.getFields();
+            if (fields.length > 0) {
+                extractedData['Interactive Fields'] = `${fields.length} form inputs detected.`;
+            }
+
+            setRawExif(extractedData);
+
+            // 2. Call into Rust WASM safely using the global export to actually scrub the file
+            const uint8Array = new Uint8Array(arrayBuffer);
             const { process_pdf } = wasm_bindgen;
             const safeBytes = process_pdf(uint8Array);
             
@@ -156,13 +190,6 @@ const App = () => {
             const cleanUrl = URL.createObjectURL(blob);
             setCleanDataUrl(cleanUrl);
             
-            // Dummy UI state to show process completion text instead of EXIF keys
-            setRawExif({
-                'Document Info': 'Producer, Creator, and Author metadata securely stripped.',
-                'XMP Metadata': 'Entire Catalog Metadata dictionary removed.',
-                'Form Elements': 'All interactive Widget fields flattened to ReadOnly.',
-                'Method': 'Client-side WebAssembly execution (0 bytes sent to server)'
-            });
         } catch (e) {
             console.error(e);
             alert("Error processing PDF. The file may be corrupted or encrypted.");
@@ -171,12 +198,88 @@ const App = () => {
         }
     };
 
+    const processBatchFiles = async (fileList) => {
+        setIsProcessing(true);
+        setBatchProgress({ current: 0, total: fileList.length, active: true });
+        
+        const zip = new JSZip();
+        let successCount = 0;
+
+        for (let i = 0; i < fileList.length; i++) {
+            const currentFile = fileList[i];
+            setBatchProgress(prev => ({ ...prev, current: i + 1 }));
+            
+            // Allow React UI to render
+            await new Promise(r => setTimeout(r, 50));
+            
+            try {
+                if (currentFile.type === 'application/pdf') {
+                    const arrayBuffer = await currentFile.arrayBuffer();
+                    const uint8Array = new Uint8Array(arrayBuffer);
+                    const { process_pdf } = wasm_bindgen;
+                    const safeBytes = process_pdf(uint8Array);
+                    zip.file(`scrubbed_${currentFile.name}`, safeBytes);
+                    successCount++;
+                } else if (currentFile.type.startsWith('image/')) {
+                    const url = URL.createObjectURL(currentFile);
+                    const dataUrl = await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            resolve(canvas.toDataURL('image/jpeg', 0.95));
+                        };
+                        img.onerror = reject;
+                        img.src = url;
+                    });
+                    
+                    const res = await fetch(dataUrl);
+                    const blob = await res.blob();
+                    zip.file(`scrubbed_${currentFile.name.split('.')[0]}.jpg`, blob);
+                    successCount++;
+                }
+            } catch (e) {
+                console.error(`Failed to process ${currentFile.name}`, e);
+            }
+        }
+        
+        if (successCount > 0) {
+            setBatchProgress(prev => ({ ...prev, generatingZip: true }));
+            await new Promise(r => setTimeout(r, 50)); 
+            
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const zipUrl = URL.createObjectURL(zipBlob);
+            
+            setCleanDataUrl(zipUrl);
+            setIsPdf(false);
+            setFileName(`Batch_${successCount}_files`);
+            setRawExif({
+                'Batch Processing': `${successCount} files securely scrubbed and zipped.`,
+                'Method': 'Client-side WebAssembly & Canvas (0 bytes sent to server)'
+            });
+            setImageUrl(zipUrl); // Bypass !imageUrl check
+        } else {
+            alert('Failed to process any files.');
+        }
+        
+        setIsProcessing(false);
+        setBatchProgress(null);
+    };
+
     // --- Export Logic ---
     const downloadSecuredFile = () => {
         if (!cleanDataUrl) return;
         const link = document.createElement('a');
         link.href = cleanDataUrl;
-        link.download = `scrubbed_${fileName.split('.')[0]}.${isPdf ? 'pdf' : 'jpg'}`;
+        
+        if (fileName.startsWith('Batch_')) {
+            link.download = `${fileName}.zip`;
+        } else {
+            link.download = `scrubbed_${fileName.split('.')[0]}.${isPdf ? 'pdf' : 'jpg'}`;
+        }
         link.click();
     };
 
@@ -188,7 +291,7 @@ const App = () => {
                     <div className="h-16 flex items-center justify-between">
                         <a href="/" className="flex items-center gap-3 cursor-pointer">
                             <div className="text-primary"><Icons.Shield /></div>
-                            <h1 className="font-bold text-xl tracking-tight hidden sm:block">PrivacyShield Toolkit</h1>
+                            <span className="font-bold text-xl tracking-tight hidden sm:block">PrivacyShield Toolkit</span>
                             
                             {/* Updated Badge as per AdSense E-E-A-T suggestion */}
                             <span className="hidden sm:inline-flex items-center ml-4 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs font-semibold px-2.5 py-0.5 rounded border border-green-300 dark:border-green-800">
@@ -200,6 +303,7 @@ const App = () => {
                         {/* Navigation Menu */}
                         <nav className="flex items-center gap-1 md:gap-4 overflow-x-auto no-scrollbar">
                             <a href="/" className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Home Toolkit</a>
+                            <a href="/security.html" className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Security & Trust</a>
                             <a href="/redact.html" className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Redact Tool</a>
                             <span className="px-3 py-2 text-sm font-medium rounded-md text-primary bg-primary/10">Metadata Cleaner</span>
                         </nav>
@@ -224,19 +328,30 @@ const App = () => {
                 {/* Dynamic View Area */}
                 <div className="flex-1 flex flex-col min-w-0">
                     <div className="bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6 mb-6">
-                        <h2 className="text-2xl font-bold mb-2">Metadata & GPS Cleaner</h2>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm">Perfect for real estate agents and businesses. Automatically remove EXIF data, GPS coordinates from photos, and privacy-leaking metadata from PDFs before public upload. Evaluated instantly inside your browser.</p>
+                        <h1 className="text-2xl font-bold mb-2">Bank-Grade Privacy Scrubber: Metadata Removal for Law & Finance</h1>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">Designed directly for legal, banking, and financial professionals. Ensure total compliance by safely removing EXIF data, GPS coordinates, and privacy-leaking PDF metadata. All scrubbing happens instantly and securely within your local browser—no uploads required.</p>
                     </div>
 
                     <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm flex flex-col overflow-hidden relative min-h-[500px]">
                         {isProcessing && (
-                            <div className="absolute inset-0 bg-white/80 dark:bg-darker/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+                            <div className="absolute inset-0 bg-white/80 dark:bg-darker/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6">
                                 <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"></div>
-                                <p className="font-medium text-lg animate-pulse">Analyzing Image Data...</p>
+                                <p className="font-medium text-lg animate-pulse mb-4">Analyzing File Data...</p>
+                                {batchProgress && (
+                                    <div className="w-full max-w-sm">
+                                        <div className="flex justify-between text-sm mb-1 font-semibold text-primary">
+                                            <span>{batchProgress.generatingZip ? 'Zipping files...' : 'Scrubbing Batch...'}</span>
+                                            <span>{batchProgress.current} / {batchProgress.total}</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden border border-gray-300 dark:border-gray-600">
+                                            <div className="bg-primary h-full transition-all duration-300" style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}></div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        {!imageUrl ? (
+                        {!(file || imageUrl) ? (
                             <div 
                                 className={`flex-1 flex flex-col items-center justify-center p-8 border-2 border-dashed m-4 rounded-xl transition-all duration-200 ${dragActive ? 'border-primary bg-primary/5 dark:bg-primary/10' : 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30'}`}
                                 onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
@@ -249,14 +364,20 @@ const App = () => {
                                 </p>
                                 <label className={`text-white px-6 py-3 rounded-lg font-medium cursor-pointer transition-colors shadow-sm ${!isWasmLoaded ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-emerald-600'}`}>
                                     Browse Files
-                                    <input type="file" className="hidden" disabled={!isWasmLoaded} accept="image/jpeg,image/png,application/pdf" onChange={handleFileInput} />
+                                    <input type="file" className="hidden" disabled={!isWasmLoaded} multiple accept="image/jpeg,image/png,application/pdf" onChange={handleFileInput} />
                                 </label>
                             </div>
                         ) : (
                             <div className="flex flex-col md:flex-row h-full">
                                 <div className="w-full md:w-1/2 p-4 border-r border-gray-200 dark:border-gray-800 flex flex-col items-center bg-gray-50 dark:bg-gray-900/50 justify-center">
                                     <h4 className="font-semibold mb-4 w-full text-left">Original File preview</h4>
-                                    {isPdf ? (
+                                    {fileName.startsWith('Batch_') ? (
+                                        <div className="w-full h-full min-h-[300px] border-2 border-slate-200 dark:border-slate-800 rounded-lg flex flex-col items-center justify-center p-6 text-center shadow-inner bg-white dark:bg-slate-900 border-dashed">
+                                            <div className="text-primary mb-4 scale-150"><Icons.Shield /></div>
+                                            <p className="font-medium text-lg text-slate-700 dark:text-slate-300 break-words max-w-[90%]">{fileName}.zip</p>
+                                            <p className="text-sm mt-2 opacity-60 text-slate-500">Batch Archive Ready for Download.</p>
+                                        </div>
+                                    ) : isPdf ? (
                                         <div className="w-full h-full min-h-[300px] border-2 border-slate-200 dark:border-slate-800 rounded-lg flex flex-col items-center justify-center p-6 text-center shadow-inner bg-white dark:bg-slate-900">
                                             <div className="text-red-500 mb-4 scale-150"><Icons.Upload /></div>
                                             <p className="font-medium text-lg text-slate-700 dark:text-slate-300 break-words max-w-[90%]">{fileName}</p>
@@ -293,14 +414,14 @@ const App = () => {
                                                 <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
                                                     <Icons.Check />
                                                 </div>
-                                                <h5 className="font-semibold">No EXIF data found</h5>
-                                                <p className="text-sm text-gray-500 mt-1">This image appears to be clean already, but we will still generate a new sanitized file to be safe.</p>
+                                                <h5 className="font-semibold">No metadata found</h5>
+                                                <p className="text-sm text-gray-500 mt-1">This file appears to be clean already, but we will still generate a new sanitized version to be safe.</p>
                                             </div>
                                         )}
                                     </div>
 
                                     <button onClick={downloadSecuredFile} disabled={!cleanDataUrl} className="w-full bg-primary disabled:opacity-50 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow-sm">
-                                        <Icons.Download /> {isPdf ? 'Download Cleaned PDF' : 'Download Cleaned Image'}
+                                        <Icons.Download /> {fileName.startsWith('Batch_') ? 'Download Batch ZIP' : (isPdf ? 'Download Cleaned PDF' : 'Download Cleaned Image')}
                                     </button>
                                 </div>
                             </div>
@@ -323,6 +444,7 @@ const App = () => {
                 <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p>© {new Date().getFullYear()} PrivacyShield Toolkit. All rights reserved.</p>
                     <div className="flex items-center gap-4 font-medium">
+                        <a href="/security.html" className="hover:text-primary transition-colors">How it Works</a>
                         <a href="/redact.html#privacy" className="hover:text-primary transition-colors">Privacy Policy</a>
                         <a href="/redact.html#terms" className="hover:text-primary transition-colors">Terms of Service</a>
                         <a href="/redact.html#contact" className="hover:text-primary transition-colors">Contact Us</a>

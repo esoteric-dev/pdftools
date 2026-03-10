@@ -343,10 +343,11 @@ const App = () => {
                     onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
                 >
                     <div className="text-gray-400 dark:text-gray-500 mb-4"><Icons.Upload /></div>
-                    <h3 className="text-xl font-semibold mb-2">Drag & Drop your file here</h3>
+                    <h1 className="text-xl font-semibold mb-2">{window.PSEO_CONFIG ? window.PSEO_CONFIG.h1 : "Drag & Drop your file here"}</h1>
                     <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 text-center max-w-md">
-                        Supports PDF, JPG, and PNG. <br/>
-                        All processing happens locally in your browser. No data is sent to any server.
+                        {window.PSEO_CONFIG ? window.PSEO_CONFIG.subtitle : (
+                            <>Supports PDF, JPG, and PNG. <br/>All processing happens locally in your browser. No data is sent to any server.</>
+                        )}
                     </p>
                     <label className="bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium cursor-pointer transition-colors shadow-sm">
                         Browse Files
@@ -565,7 +566,9 @@ const App = () => {
                         {/* Navigation Menu */}
                         <nav className="flex items-center gap-1 md:gap-4 overflow-x-auto no-scrollbar">
                             <a href="/" className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Home Toolkit</a>
+                            <a href="/security.html" className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Security & Trust</a>
                             <button onClick={() => navigateTo('tool')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'tool' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Redact Tool</button>
+                            <a href="/metadata-cleaner.html" className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Metadata Cleaner</a>
                             <button onClick={() => navigateTo('blog')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'blog' || currentView === 'article' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Blog</button>
                             <button onClick={() => navigateTo('about')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'about' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>About</button>
                             <button onClick={() => navigateTo('privacy')} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentView === 'privacy' ? 'text-primary bg-blue-50 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Privacy</button>
@@ -579,8 +582,14 @@ const App = () => {
                 </div>
             </header>
 
-            {/* Top Ad Banner Container */}
+            {/* Top Ad Banner / pSEO Container */}
             <div className="max-w-7xl mx-auto w-full px-4 pt-6">
+                {window.PSEO_CONFIG && window.PSEO_CONFIG.seoText && (
+                    <div className="mb-4 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm">
+                        <h2 className="text-2xl font-bold mb-2">{window.PSEO_CONFIG.seoTitle}</h2>
+                        <p className="text-gray-600 dark:text-gray-400">{window.PSEO_CONFIG.seoText}</p>
+                    </div>
+                )}
                 <div className="w-full h-24 bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm font-medium">
                     Ad Container (Top Banner) - Insert Google AdSense Script Here
                 </div>
@@ -639,6 +648,7 @@ const App = () => {
                 <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p>© {new Date().getFullYear()} PrivacyShield Toolkit. All rights reserved.</p>
                     <div className="flex items-center gap-4 font-medium">
+                        <a href="/security.html" className="hover:text-primary transition-colors">How it Works</a>
                         <button onClick={() => navigateTo('privacy')} className="hover:text-primary transition-colors">Privacy Policy</button>
                         <button onClick={() => navigateTo('terms')} className="hover:text-primary transition-colors">Terms of Service</button>
                         <button onClick={() => navigateTo('contact')} className="hover:text-primary transition-colors">Contact Us</button>

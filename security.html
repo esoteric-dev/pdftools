@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trust Verification | PrivacyShield is 100% Offline</title>
+    <meta name="description" content="Learn how PrivacyShield works completely offline in your browser. We prove that your files never leave your computer, ensuring absolute privacy for sensitive data.">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        dark: '#0f172a',
+                        darker: '#020617',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Icons and Theme -->
+    <script>
+        function toggleTheme() {
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            localStorage.setItem('theme', newTheme);
+            document.documentElement.className = newTheme;
+            document.body.className = newTheme === 'dark' ? 'bg-dark text-gray-100' : 'bg-gray-50 text-gray-900';
+        }
+
+        window.onload = () => {
+            const storedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.className = storedTheme;
+            document.body.className = storedTheme === 'dark' ? 'bg-dark text-gray-100' : 'bg-gray-50 text-gray-900';
+        };
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-900 transition-colors duration-200 min-h-screen flex flex-col font-sans">
+    
+    <!-- Header -->
+    <header class="bg-white dark:bg-darker border-b border-gray-200 dark:border-gray-800 shadow-sm z-10 sticky top-0" id="header">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="h-16 flex items-center justify-between">
+                <a href="/" class="flex items-center gap-3 cursor-pointer">
+                    <div class="text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <span class="font-bold text-xl tracking-tight hidden sm:block">PrivacyShield Toolkit</span>
+                    
+                    <span class="hidden sm:inline-flex items-center ml-4 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs font-semibold px-2.5 py-0.5 rounded border border-green-300 dark:border-green-800">
+                        <span class="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
+                        Offline Mode Active
+                    </span>
+                </a>
+                
+                <!-- Navigation Menu -->
+                <nav class="flex items-center gap-1 md:gap-4 overflow-x-auto no-scrollbar">
+                    <a href="/" class="px-3 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Home Toolkit</a>
+                    <a href="/security.html" class="px-3 py-2 text-sm font-medium rounded-md transition-colors text-primary bg-blue-50 dark:bg-blue-900/30">Security & Trust</a>
+                </nav>
+
+                <button onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ml-2" aria-label="Toggle Dark Mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-4xl mx-auto w-full px-4 py-12 flex flex-col items-center">
+        <!-- Hero Section -->
+        <div class="text-center w-full mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">Don't Trust Us. Verify Us.</h1>
+            <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                Other PDF tools say they delete your files after 2 hours. We say your files never leave your computer in the first place. Here is the technical proof.
+            </p>
+        </div>
+
+        <!-- The Offline Test Section -->
+        <div class="w-full bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-8 mb-10 text-center shadow-lg transform transition-all hover:scale-[1.01]">
+            <div class="w-16 h-16 bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 14.25h6.24c.616 0 1.282.17 1.83.473l.638.35c.164.09.35.09.514 0l.638-.35c.548-.303 1.214-.473 1.83-.473H21m-9-5.25h.008v.008H12v-.008zM12 15h.008v.008H12V15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 15.75v-9A2.25 2.25 0 0 1 7.5 4.5h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25z" /></svg>
+            </div>
+            <h2 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white">The "Offline Test" Challenge</h2>
+            <p class="text-xl font-medium text-gray-700 dark:text-gray-300 mb-6">Want to be absolutely sure your data is safe? Try this:</p>
+            <ol class="text-left max-w-md mx-auto space-y-4 mb-8">
+                <li class="flex items-start gap-4 p-4 bg-white dark:bg-darker rounded-xl border border-gray-200 dark:border-gray-700">
+                    <span class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">1</span>
+                    <span class="text-gray-700 dark:text-gray-300">Open our <a href="/redact.html" class="text-primary hover:underline font-semibold">PDF Redactor</a> or <a href="/metadata-cleaner.html" class="text-primary hover:underline font-semibold">Metadata Cleaner</a>.</span>
+                </li>
+                <li class="flex items-start gap-4 p-4 bg-white dark:bg-darker rounded-xl border border-gray-200 dark:border-gray-700">
+                    <span class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">2</span>
+                    <span class="text-gray-700 dark:text-gray-300 font-bold">Turn off your Wi-Fi or disconnect your ethernet cable. Go completely offline.</span>
+                </li>
+                <li class="flex items-start gap-4 p-4 bg-white dark:bg-darker rounded-xl border border-gray-200 dark:border-gray-700">
+                    <span class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">3</span>
+                    <span class="text-gray-700 dark:text-gray-300">Process your files, redact your data, and click download.</span>
+                </li>
+            </ol>
+            <p class="text-2xl font-black text-green-600 dark:text-green-400">Notice how it still works perfectly.</p>
+            <p class="mt-2 text-gray-600 dark:text-gray-400 font-medium">That’s because everything is powered by WebAssembly directly on your CPU. No uploads required.</p>
+        </div>
+
+        <!-- Technical Proof Section -->
+        <div class="w-full bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-2xl p-8 shadow-sm text-left">
+            <h2 class="text-2xl font-bold mb-6 border-b border-gray-200 dark:border-gray-800 pb-4">The Technical Proof For IT & Legal Professionals</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold mb-3">Watch the Network Tab</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        If you open your browser's Developer Tools (F12) and navigate to the <strong>Network</strong> tab, you will see exactly zero outbound requests when you process a PDF. 
+                    </p>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        While other tools hit external APIs via REST or GraphQL sending your proprietary data in packets, our Network tab stays completely silent. Your data is literally never serialized over an HTTP connection.
+                    </p>
+                </div>
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 font-mono text-sm text-gray-500 overflow-x-auto">
+                    <div class="flex items-center gap-2 mb-2 text-gray-400">
+                        <span class="w-3 h-3 rounded-full bg-red-400"></span>
+                        <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+                        <span class="w-3 h-3 rounded-full bg-green-400"></span>
+                        <span class="ml-2">Console / Network Tab</span>
+                    </div>
+                    > Waiting for network requests...<br>
+                    > Drag and drop initiated...<br>
+                    > Reading file to memory buffer...<br>
+                    > <span class="text-green-500">Executing WebAssembly module...</span><br>
+                    > Generating scrubbed PDF blob...<br>
+                    > Initiating local download.<br><br>
+                    <span class="text-primary font-bold">Network requests: 0</span>
+                </div>
+            </div>
+            
+            <div class="mt-8">
+                <h3 class="text-xl font-semibold mb-3">How We Build Trust Into The Code</h3>
+                <ul class="list-disc pl-5 text-gray-600 dark:text-gray-400 space-y-2">
+                    <li><strong>No Backends:</strong> We literally do not have a server backend capable of receiving your PDF uploads. It is architecturally impossible for us to store your files.</li>
+                    <li><strong>WebAssembly Native:</strong> We compiled industry-standard Rust PDF processing libraries directly into WebAssembly (WASM). The processing logic executes securely inside your browser's sandboxed environment.</li>
+                    <li><strong>No Logging:</strong> Since nothing is uploaded, there is no database logging your IP address with your file names. Complete anonymity.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="mt-12">
+            <a href="/" class="text-primary hover:text-blue-700 font-semibold flex items-center gap-2 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Return to the Toolkit
+            </a>
+        </div>
+    </main>
+
+    <!-- Ad-Ready Footer -->
+    <footer class="border-t border-gray-200 dark:border-gray-800 py-8 text-sm text-gray-500 mt-auto bg-white dark:bg-darker">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex flex-col items-center md:items-start">
+                <p class="font-semibold text-gray-700 dark:text-gray-300 mb-2">© 2024 PrivacyShield Toolkit. All rights reserved.</p>
+                <p class="flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    Local processing powered by standard Web APIs.
+                </p>
+            </div>
+            
+            <div class="flex items-center gap-6 font-medium">
+                <a href="/security.html" class="text-primary">How it Works</a>
+                <a href="/redact.html" class="hover:text-primary transition-colors">Privacy Policy</a>
+                <a href="/redact.html" class="hover:text-primary transition-colors">Terms of Service</a>
+                <a href="/redact.html" class="hover:text-primary transition-colors">Contact Us</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

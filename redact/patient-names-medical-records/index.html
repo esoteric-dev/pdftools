@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redact Patient Names from Medical Records | HIPAA Safe Tool</title>
+    <meta name="description" content="Securely redact patient names and Protected Health Information (PHI) from medical records locally. No cloud uploads ensure HIPAA compliance.">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#3b82f6', dark: '#0f172a', darker: '#020617' } } } }
+    </script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';</script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+
+    <script>
+        window.PSEO_CONFIG = {
+            h1: "Redact Patient Names from Medical Records",
+            subtitle: "HIPAA Compliant local processing. Destroy Protected Health Information (PHI) without uploading sensitive clinical data.",
+            seoTitle: "The Only HIPAA-Safe Way To Redact Online",
+            seoText: "When sharing clinical files for audits, research, or second opinions, removing Protected Health Information (PHI) is a strict regulatory requirement. Standard online redactors store your files on their servers, violating HIPAA. Our toolkit operates 100% locally on your machine—making it safe, compliant, and irreversible."
+        };
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-900 transition-colors duration-200">
+    <div id="root"></div>
+    <script type="text/babel" src="/privacy.js"></script>
+</body>
+</html>
