@@ -4,7 +4,7 @@ const path = require('path');
 const BASE_URL = 'https://varalabs.systems';
 const DESTINATION = path.join(__dirname, 'sitemap.xml');
 
-// 1. Core Pages
+// 1. Core Pages & Explicit Hardcoded Pages
 const corePages = [
   { url: '/', priority: 1.0, changefreq: 'weekly' },
   { url: '/security.html', priority: 0.9, changefreq: 'monthly' },
@@ -12,34 +12,29 @@ const corePages = [
   { url: '/metadata-cleaner.html', priority: 1.0, changefreq: 'monthly' }
 ];
 
-// 2. pSEO Matrix Data
-const coreTools = ['redactor', 'metadata-scrubber', 'pdf-to-excel'];
-const nicheUseCases = [
-  'bank-statements',
-  'medical-records',
-  'legal-discovery',
-  'real-estate-contracts',
-  'tax-forms',
-  'university-applications',
-  'resume-ats'
-];
-const actionKeywords = ['secure', 'private', 'local', 'offline'];
-
+// 2. Scan specific pSEO Directories for valid deployed folders
 const matrixPages = [];
+const publicDir = path.join(__dirname); 
 
-// Generate permutations: /tools/[action]-[tool]-for-[niche]
-for (const tool of coreTools) {
-  for (const niche of nicheUseCases) {
-    for (const action of actionKeywords) {
-      const slug = `${action}-${tool}-for-${niche}`;
+// Target the /redact folder we just built our first 3 pages into
+const redactDir = path.join(publicDir, 'redact');
+if (fs.existsSync(redactDir)) {
+  const folders = fs.readdirSync(redactDir);
+  for (const folder of folders) {
+    // Only include if there is an index.html inside
+    const indexPath = path.join(redactDir, folder, 'index.html');
+    if (fs.existsSync(indexPath)) {
       matrixPages.push({
-        url: `/tools/${slug}`,
+        url: `/redact/${folder}/`,
         priority: 0.8,
         changefreq: 'monthly'
       });
     }
   }
 }
+
+// TODO: If we ever build /tools/[slug] physical pages, we can add a scanner here.
+// For now, only combine what ACTUALLY EXISTS on disk to prevent SEO SPAM 404s.
 
 const allPages = [...corePages, ...matrixPages];
 
