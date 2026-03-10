@@ -21,6 +21,8 @@ const App = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const [cleanDataUrl, setCleanDataUrl] = useState(null);
+    const [isPdf, setIsPdf] = useState(false);
+    const [isWasmLoaded, setIsWasmLoaded] = useState(false);
 
     // --- Theme Initialization ---
     useEffect(() => {
@@ -28,6 +30,20 @@ const App = () => {
         setTheme(storedTheme);
         document.documentElement.className = storedTheme;
         document.body.className = storedTheme === 'dark' ? 'bg-dark text-gray-100' : 'bg-gray-50 text-gray-900';
+    }, []);
+
+    // --- WASM Initialization ---
+    useEffect(() => {
+        async function loadWasm() {
+            try {
+                // Initialize the globally injected `wasm_bindgen` function and point to the .wasm file 
+                await wasm_bindgen('./pdf-processor/pkg/pdf_processor_bg.wasm');
+                setIsWasmLoaded(true);
+            } catch (err) {
+                console.error("Failed to load WASM module:", err);
+            }
+        }
+        loadWasm();
     }, []);
 
     const toggleTheme = () => {
@@ -67,15 +83,21 @@ const App = () => {
         setImageUrl(null);
         setRawExif({});
         setCleanDataUrl(null);
+        setIsPdf(false);
     };
 
     const processFile = async (droppedFile) => {
         const type = droppedFile.type;
-        if (!type.startsWith('image/')) {
-            alert('Please upload a valid Image (JPG/PNG).');
+        if (type === 'application/pdf') {
+            setIsPdf(true);
+            processPdf(droppedFile);
+            return;
+        } else if (!type.startsWith('image/')) {
+            alert('Please upload a valid Image (JPG/PNG) or PDF Document.');
             return;
         }
 
+        setIsPdf(false);
         setIsProcessing(true);
         setFileName(droppedFile.name);
         setFile(droppedFile);
@@ -117,12 +139,44 @@ const App = () => {
         img.src = sourceUrl;
     };
 
+    const processPdf = async (pdfFile) => {
+        setIsProcessing(true);
+        setFileName(pdfFile.name);
+        setFile(pdfFile);
+        
+        try {
+            const arrayBuffer = await pdfFile.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+            
+            // Call into Rust WASM safely using the global export
+            const { process_pdf } = wasm_bindgen;
+            const safeBytes = process_pdf(uint8Array);
+            
+            const blob = new Blob([safeBytes], { type: 'application/pdf' });
+            const cleanUrl = URL.createObjectURL(blob);
+            setCleanDataUrl(cleanUrl);
+            
+            // Dummy UI state to show process completion text instead of EXIF keys
+            setRawExif({
+                'Document Info': 'Producer, Creator, and Author metadata securely stripped.',
+                'XMP Metadata': 'Entire Catalog Metadata dictionary removed.',
+                'Form Elements': 'All interactive Widget fields flattened to ReadOnly.',
+                'Method': 'Client-side WebAssembly execution (0 bytes sent to server)'
+            });
+        } catch (e) {
+            console.error(e);
+            alert("Error processing PDF. The file may be corrupted or encrypted.");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     // --- Export Logic ---
     const downloadSecuredFile = () => {
         if (!cleanDataUrl) return;
         const link = document.createElement('a');
         link.href = cleanDataUrl;
-        link.download = `scrubbed_${fileName.split('.')[0]}.jpg`;
+        link.download = `scrubbed_${fileName.split('.')[0]}.${isPdf ? 'pdf' : 'jpg'}`;
         link.click();
     };
 
@@ -171,7 +225,7 @@ const App = () => {
                 <div className="flex-1 flex flex-col min-w-0">
                     <div className="bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6 mb-6">
                         <h2 className="text-2xl font-bold mb-2">Metadata & GPS Cleaner</h2>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm">Perfect for real estate agents. Automatically remove EXIF data, GPS coordinates, and camera info from your photos before public upload. Evaluated instantly inside your browser.</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">Perfect for real estate agents and businesses. Automatically remove EXIF data, GPS coordinates from photos, and privacy-leaking metadata from PDFs before public upload. Evaluated instantly inside your browser.</p>
                     </div>
 
                     <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm flex flex-col overflow-hidden relative min-h-[500px]">
@@ -190,19 +244,27 @@ const App = () => {
                                 <div className="text-gray-400 dark:text-gray-500 mb-4"><Icons.Upload /></div>
                                 <h3 className="text-xl font-semibold mb-2">Drag & Drop Image Here</h3>
                                 <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 text-center max-w-md">
-                                    Supports JPG and PNG. <br/>
-                                    All processing happens locally in your browser.
+                                    Supports JPG, PNG, and PDF. <br/>
+                                    All processing happens locally in your browser. { !isWasmLoaded && "(Loading WASM Engine...)" }
                                 </p>
-                                <label className="bg-primary hover:bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium cursor-pointer transition-colors shadow-sm">
-                                    Browse Image
-                                    <input type="file" className="hidden" accept="image/jpeg,image/png" onChange={handleFileInput} />
+                                <label className={`text-white px-6 py-3 rounded-lg font-medium cursor-pointer transition-colors shadow-sm ${!isWasmLoaded ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-emerald-600'}`}>
+                                    Browse Files
+                                    <input type="file" className="hidden" disabled={!isWasmLoaded} accept="image/jpeg,image/png,application/pdf" onChange={handleFileInput} />
                                 </label>
                             </div>
                         ) : (
                             <div className="flex flex-col md:flex-row h-full">
                                 <div className="w-full md:w-1/2 p-4 border-r border-gray-200 dark:border-gray-800 flex flex-col items-center bg-gray-50 dark:bg-gray-900/50 justify-center">
-                                    <h4 className="font-semibold mb-4 w-full text-left">Original Image preview</h4>
-                                    <img src={imageUrl} className="max-h-[400px] w-auto drop-shadow-lg rounded-md border border-gray-300 dark:border-gray-700 object-contain" />
+                                    <h4 className="font-semibold mb-4 w-full text-left">Original File preview</h4>
+                                    {isPdf ? (
+                                        <div className="w-full h-full min-h-[300px] border-2 border-slate-200 dark:border-slate-800 rounded-lg flex flex-col items-center justify-center p-6 text-center shadow-inner bg-white dark:bg-slate-900">
+                                            <div className="text-red-500 mb-4 scale-150"><Icons.Upload /></div>
+                                            <p className="font-medium text-lg text-slate-700 dark:text-slate-300 break-words max-w-[90%]">{fileName}</p>
+                                            <p className="text-sm mt-2 opacity-60 text-slate-500">PDF Document selected for cleaning.</p>
+                                        </div>
+                                    ) : (
+                                        <img src={imageUrl} className="max-h-[400px] w-auto drop-shadow-lg rounded-md border border-gray-300 dark:border-gray-700 object-contain" />
+                                    )}
                                 </div>
                                 
                                 <div className="w-full md:w-1/2 p-6 flex flex-col">
@@ -238,7 +300,7 @@ const App = () => {
                                     </div>
 
                                     <button onClick={downloadSecuredFile} disabled={!cleanDataUrl} className="w-full bg-primary disabled:opacity-50 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow-sm">
-                                        <Icons.Download /> Download Cleaned Image
+                                        <Icons.Download /> {isPdf ? 'Download Cleaned PDF' : 'Download Cleaned Image'}
                                     </button>
                                 </div>
                             </div>

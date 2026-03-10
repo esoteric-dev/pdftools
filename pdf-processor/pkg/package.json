@@ -1,0 +1,11 @@
+{
+  "name": "pdf-processor",
+  "version": "0.1.0",
+  "files": [
+    "pdf_processor_bg.wasm",
+    "pdf_processor.js",
+    "pdf_processor.d.ts"
+  ],
+  "browser": "pdf_processor.js",
+  "types": "pdf_processor.d.ts"
+}

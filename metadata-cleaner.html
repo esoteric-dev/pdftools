@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VaraLabs Metadata Cleaner | Remove GPS from real estate photos</title>
-    <meta name="description" content="varalabs.systems resources: A secure, client-side tool to strip EXIF data, GPS coordinates, and author information from your photos. Perfect for real estate agents and privacy-conscious users.">
+    <title>VaraLabs Metadata Cleaner | Remove EXIF and PDF Metadata</title>
+    <meta name="description" content="varalabs.systems resources: A secure, client-side tool to strip EXIF data from photos and privacy-leaking metadata from PDFs. All processing runs locally.">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,10 +36,13 @@
 
     <!-- PDF-lib (just in case) -->
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+    <!-- WASM PDF Processor -->
+    <script src="pdf-processor/pkg/pdf_processor.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 transition-colors duration-200">
     <div id="root"></div>
 
-    <script type="text/babel" src="metadata-cleaner.js"></script>
+    <script type="text/babel" src="metadata-cleaner.js?v=2"></script>
 </body>
 </html>
