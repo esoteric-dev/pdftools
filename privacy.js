@@ -401,9 +401,9 @@ const App = () => {
 
     const renderAbout = () => (
         <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8 prose-content">
-            <h2 className="text-3xl font-bold mt-0 border-b border-gray-200 dark:border-gray-800 pb-4">About PrivacyShield</h2>
+            <h1 className="text-3xl font-bold mt-0 border-b border-gray-200 dark:border-gray-800 pb-4">About PrivacyShield</h1>
             
-            <h3 className="text-2xl font-semibold mt-6 mb-3">Our Mission: Privacy by Default</h3>
+            <h2 className="text-2xl font-semibold mt-6 mb-3">Our Mission: Privacy by Default</h2>
             <p>At <strong>PrivacyShield</strong>, we believe that your data belongs to you—not to a server in the cloud. In an era where "free" online tools often come at the cost of your privacy, we built a toolkit that operates on a different principle: <strong>Zero-Upload Processing</strong>.</p>
             
             <h3 className="text-2xl font-semibold mt-8 mb-3">What Makes Us Different?</h3>
@@ -442,7 +442,7 @@ const App = () => {
 
     const renderContact = () => (
         <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8">
-            <h2 className="text-3xl font-bold mb-6 border-b border-gray-200 dark:border-gray-800 pb-4">Contact Us</h2>
+            <h1 className="text-3xl font-bold mb-6 border-b border-gray-200 dark:border-gray-800 pb-4">Contact Us</h1>
             <p className="mb-6 text-gray-600 dark:text-gray-400">Have questions about our tools, suggestions for features, or business inquiries? Reach out to us using the form below.</p>
             <form className="max-w-lg space-y-4" onSubmit={(e) => { e.preventDefault(); alert("Thanks for reaching out! We'll get back to you soon."); }}>
                 <div>
@@ -464,7 +464,7 @@ const App = () => {
 
     const renderPrivacy = () => (
         <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8 prose-content">
-            <h2 className="text-3xl font-bold mt-0 border-b border-gray-200 dark:border-gray-800 pb-4">Privacy Policy</h2>
+            <h1 className="text-3xl font-bold mt-0 border-b border-gray-200 dark:border-gray-800 pb-4">Privacy Policy</h1>
             <p className="text-sm text-gray-500 mb-8">Last Updated: October 2024</p>
             
             <h3 className="text-xl font-bold mt-6 mb-2">1. Your Files Are Yours</h3>
@@ -490,7 +490,7 @@ const App = () => {
 
     const renderTerms = () => (
         <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8 prose-content">
-            <h2 className="text-3xl font-bold mt-0 border-b border-gray-200 dark:border-gray-800 pb-4">Terms of Service</h2>
+            <h1 className="text-3xl font-bold mt-0 border-b border-gray-200 dark:border-gray-800 pb-4">Terms of Service</h1>
             <p className="text-sm text-gray-500 mb-8">Last Updated: October 2024</p>
             
             <h3 className="text-xl font-bold mt-6 mb-2">1. Acceptance of Terms</h3>
@@ -506,7 +506,7 @@ const App = () => {
 
     const renderBlog = () => (
         <div className="flex-1 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-8">
-            <h2 className="text-3xl font-bold mb-2">Data Privacy Blog</h2>
+            <h1 className="text-3xl font-bold mb-2">Data Privacy Blog</h1>
             <p className="text-gray-500 dark:text-gray-400 mb-8 pb-4 border-b border-gray-200 dark:border-gray-800">Insights, tutorials, and news about document security and metadata management.</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -554,7 +554,7 @@ const App = () => {
                     <div className="h-16 flex items-center justify-between">
                         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigateTo('tool')}>
                             <div className="text-primary"><Icons.Shield /></div>
-                            <h1 className="font-bold text-xl tracking-tight hidden sm:block">PrivacyShield Toolkit</h1>
+                            <div className="font-bold text-xl tracking-tight hidden sm:block">PrivacyShield Toolkit</div>
                             
                             {/* Updated Badge as per AdSense E-E-A-T suggestion */}
                             <span className="hidden sm:inline-flex items-center ml-4 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs font-semibold px-2.5 py-0.5 rounded border border-green-300 dark:border-green-800">
@@ -586,7 +586,7 @@ const App = () => {
             <div className="max-w-7xl mx-auto w-full px-4 pt-6">
                 {window.PSEO_CONFIG && window.PSEO_CONFIG.seoText && (
                     <div className="mb-4 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm">
-                        <h2 className="text-2xl font-bold mb-2">{window.PSEO_CONFIG.seoTitle}</h2>
+                        <h1 className="text-2xl font-bold mb-2">{window.PSEO_CONFIG.seoTitle}</h1>
                         <p className="text-gray-600 dark:text-gray-400">{window.PSEO_CONFIG.seoText}</p>
                     </div>
                 )}

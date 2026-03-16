@@ -6,6 +6,37 @@
     <title>VaraLabs PrivacyShield | Free Secure PDF & Image Tools</title>
     <meta name="description" content="varalabs.systems is your first and best source for information about varalabs. We offer a suite of 100% local, secure, browser-based tools for document privacy, including our PDF Redactor and Metadata Cleaner.">
     
+    <!-- SEO tags -->
+    <link rel="canonical" href="https://www.varalabs.systems/" />
+    
+    <!-- Open Graph tags for social sharing -->
+    <meta property="og:title" content="VaraLabs PrivacyShield | Free Secure PDF & Image Tools">
+    <meta property="og:description" content="A suite of 100% local, secure, browser-based tools for document privacy, including our PDF Redactor and Metadata Cleaner.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.varalabs.systems/">
+    <meta property="og:image" content="https://www.varalabs.systems/og-image.jpg"> <!-- Ensure this image exists, or update path -->
+
+    <!-- Twitter Card tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="VaraLabs PrivacyShield | Free Secure PDF & Image Tools">
+    <meta name="twitter:description" content="A suite of 100% local, secure, browser-based tools for document privacy, including our PDF Redactor and Metadata Cleaner.">
+    <meta name="twitter:image" content="https://www.varalabs.systems/og-image.jpg"> <!-- Ensure this image exists, or update path -->
+
+    <!-- JSON-LD Schema for WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "VaraLabs PrivacyShield",
+      "url": "https://www.varalabs.systems/",
+      "description": "A suite of 100% local, secure, browser-based tools for document privacy, including our PDF Redactor and Metadata Cleaner.",
+      "publisher": {
+        "@type": "Organization",
+        "name": "VaraLabs"
+      }
+    }
+    </script>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -40,6 +71,35 @@
             document.body.className = storedTheme === 'dark' ? 'bg-dark text-gray-100' : 'bg-gray-50 text-gray-900';
         };
     </script>
+    <!-- FAQPage JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{
+        "@type": "Question",
+        "name": "Is my data uploaded to a server when I use PrivacyShield?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. All of our tools process your PDFs and images entirely locally within your web browser using WebAssembly and HTML5 Canvas. Your files never leave your device."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Does the PDF Redactor actually remove the text?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Unlike basic black highlighters that just draw a box over the text, our redactor rasterizes the page into an image. This completely destroys the underlying text layer and metadata, making it mathematically impossible to recover the hidden sensitive information."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Can I use PrivacyShield completely offline?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! Once you load the webpage, you can safely turn off your Wi-Fi or disconnect your ethernet cable. The tools will still function perfectly since all the processing logic is already downloaded to your browser."
+        }
+      }]
+    }
+    </script>
 </head>
 <body class="bg-gray-50 text-gray-900 transition-colors duration-200 min-h-screen flex flex-col font-sans">
     
@@ -51,7 +111,7 @@
                     <div class="text-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
-                    <h1 class="font-bold text-xl tracking-tight hidden sm:block">PrivacyShield Toolkit</h1>
+                    <div class="font-bold text-xl tracking-tight hidden sm:block">PrivacyShield Toolkit</div>
                     
                     <span class="hidden sm:inline-flex items-center ml-4 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs font-semibold px-2.5 py-0.5 rounded border border-green-300 dark:border-green-800">
                         <span class="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
@@ -75,11 +135,51 @@
 
     <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-12 flex flex-col items-center">
         <!-- Hero Section -->
-        <div class="text-center max-w-3xl mb-16">
-            <h2 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-6">Absolute Privacy for Your Documents</h2>
+        <div class="text-center max-w-3xl mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-6">Absolute Privacy for Your Documents</h1>
             <p class="text-xl text-gray-600 dark:text-gray-400 mb-8">
-                A suite of professional tools that process your files entirely in your browser. None of your data is ever uploaded to a server. Secure, fast, and 100% free.
+                A suite of professional tools that process your files entirely in your browser. None of your data is ever uploaded to a server. Secure, fast, and 100% free offline PDF editor.
             </p>
+        </div>
+
+        <!-- FAQ Section for SEO & Trust -->
+        <div class="w-full max-w-3xl mb-16 bg-white dark:bg-darker border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
+            <h2 class="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
+            <div class="space-y-4 text-left">
+                <details class="group border-b border-gray-200 dark:border-gray-800 pb-4">
+                    <summary class="flex justify-between items-center font-semibold cursor-pointer list-none">
+                        <span>Is my data uploaded to a server?</span>
+                        <span class="transition group-open:rotate-180">
+                            <svg fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </span>
+                    </summary>
+                    <p class="text-gray-600 dark:text-gray-400 mt-3">
+                        No. All of our tools process your PDFs and images entirely locally within your web browser using WebAssembly. Your files never leave your device.
+                    </p>
+                </details>
+                <details class="group border-b border-gray-200 dark:border-gray-800 pb-4">
+                    <summary class="flex justify-between items-center font-semibold cursor-pointer list-none">
+                        <span>Does the PDF Redactor actually remove the text?</span>
+                        <span class="transition group-open:rotate-180">
+                            <svg fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </span>
+                    </summary>
+                    <p class="text-gray-600 dark:text-gray-400 mt-3">
+                        Yes. Unlike basic black highlighters, our redactor rasterizes the page into an image. This completely destroys the underlying text layer and metadata.
+                    </p>
+                </details>
+                <details class="group">
+                    <summary class="flex justify-between items-center font-semibold cursor-pointer list-none">
+                        <span>Can I use PrivacyShield completely offline?</span>
+                        <span class="transition group-open:rotate-180">
+                            <svg fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </span>
+                    </summary>
+                    <p class="text-gray-600 dark:text-gray-400 mt-3">
+                        Yes! Once you load the webpage, you can safely turn off your Wi-Fi. The tools will still function perfectly.
+                    </p>
+                </details>
+            </div>
         </div>
 
         <!-- Toolkit Grid -->
